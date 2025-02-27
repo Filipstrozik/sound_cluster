@@ -7,12 +7,15 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 
+
 class AudioAnalyzer:
     def __init__(self, directory):
         self.directory = directory
         self.audio_files = self.list_audio_files()
         self.sounds_df = pd.DataFrame(columns=range(8))
         self.chosen_audio_file_path = ""
+        self.current_waveform = None
+        self.current_sr = None
         self.process_audio_files()
         self.create_plot()
 
@@ -24,6 +27,7 @@ class AudioAnalyzer:
         ]
 
     def analyze_audio(self, file_path):
+        # TODO: make this more efficient
         y, sr = librosa.load(file_path)
 
         if y.size == 0:
@@ -93,7 +97,7 @@ class AudioAnalyzer:
         )
 
     def create_plot(self):
-        self.fig = make_subplots(rows=1, cols=2, column_widths=[0.7, 0.3])
+        self.fig = make_subplots(rows=1, cols=2, column_widths=[0.6, 0.4])
 
         scatter = go.Scatter(
             x=self.sounds_df_pca["PC1"],
@@ -106,12 +110,35 @@ class AudioAnalyzer:
         )
 
         self.fig.add_trace(scatter, row=1, col=1)
+
+        self.fig.update_layout(hovermode="closest")
+
+        # Add empty waveform plot initially
+        self.fig.add_trace(
+            go.Scatter(
+                y=[],
+                line=dict(color="black", width=1),
+                showlegend=False,
+                hoverinfo="none",
+            ),
+            row=1,
+            col=2,
+        )
+
         self.fig.update_layout(
             title="Sound Cluster (alpha 0.1 @zean)",
             xaxis_title="PC1",
             yaxis_title="PC2",
+            xaxis2_title="Time (s)",
+            yaxis2_title="Amplitude",
             showlegend=False,
         )
 
-        self.fig.layout.hovermode = "closest"
-        self.fig.add_trace(go.Scatter(y=[]), row=1, col=2) 
+    def update_waveform(self, file_path):
+        y, sr = librosa.load(file_path)
+
+        self.fig.update_traces(
+            y=y,
+            row=1,
+            col=2,
+        )
