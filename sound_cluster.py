@@ -1,4 +1,5 @@
 import json
+import webbrowser
 import dash
 from dash import dcc, html, Input, Output, State
 import dash_bootstrap_components as dbc
@@ -9,8 +10,11 @@ from audio_analyzer import AudioAnalyzer
 import platform
 import subprocess
 
-# Initialize Dash app with suppressed callback exceptions
-app = dash.Dash(__name__, suppress_callback_exceptions=True)
+app = dash.Dash(
+    __name__,
+    suppress_callback_exceptions=True,
+    external_stylesheets=[dbc.themes.BOOTSTRAP],
+)
 
 # Get directory path from command line arguments
 initial_directory = sys.argv[1] if len(sys.argv) > 1 else None
@@ -78,6 +82,7 @@ audio_path = None
 app.layout = html.Div(
     [
         html.H1("Sound Cluster"),
+        html.Button("Exit Application", id="exit-button", style={"margin": "10px"}),
         html.Div(id="directory-status", style={"marginTop": "10px"}),
         html.Div(
             id="main-content",
@@ -163,8 +168,28 @@ def show_audio_file(n_clicks, directory):
     return 0
 
 
+# Exit app when window is closed
+@app.callback(
+    Output("exit-button", "n_clicks"),
+    Input("exit-button", "n_clicks"),
+    prevent_initial_call=True,
+)
+def exit_application(n_clicks):
+    if n_clicks is not None:
+        # Stop any playing audio before exiting
+        if pygame.mixer.get_init():
+            pygame.mixer.music.stop()
+            pygame.mixer.quit()
+
+        # exit the application
+        os._exit(0)
+
+    return 0
+
+
 if __name__ == "__main__":
+    webbrowser.open("http://127.0.0.1:8050")
     if sys.platform.startswith("darwin"):  # macOS
-        app.run_server(debug=True, use_reloader=False)
+        app.run_server(debug=False, use_reloader=False)
     else:
-        app.run_server(debug=True)
+        app.run_server(debug=False)
