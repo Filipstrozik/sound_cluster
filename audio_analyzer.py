@@ -124,7 +124,6 @@ class AudioAnalyzer:
         )
 
         self.fig.update_layout(
-            title="Sound Cluster (alpha 0.1 @zean)",
             xaxis_title="PC1",
             yaxis_title="PC2",
             xaxis2_title="Time (s)",

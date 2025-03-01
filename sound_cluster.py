@@ -34,6 +34,14 @@ def load_directory(contents, filename):
         return html.Div(
             [
                 dbc.Row(
+                    dbc.Col(
+                        html.Div(
+                            f"Loaded directory: {directory} with {len(audio_analyzer.audio_files)} audio files",
+                            style={"margin": "10px"},
+                        )
+                    )
+                ),
+                dbc.Row(
                     [
                         dbc.Col(
                             html.Div(
@@ -49,20 +57,24 @@ def load_directory(contents, filename):
                                 ]
                             )
                         ),
+                    ]
+                ),
+                dbc.Row(
+                    [
                         dbc.Col(
                             html.Div(
                                 [
-                                    html.Div(id="audio-info"),
-                                    html.Button(
-                                        "Show audio", id="show-audio-button", n_clicks=0
+                                    html.Div(id="audio-info", style={"margin": "10px"}),
+                                    dbc.Button(
+                                        "Show audio",
+                                        id="show-audio-button",
+                                        n_clicks=0,
+                                        style={"margin": "10px"},
                                     ),
                                 ]
                             )
                         ),
                     ]
-                ),
-                html.Div(
-                    f"Loaded directory: {directory} with {len(audio_analyzer.audio_files)} audio files"
                 ),
             ]
         )
@@ -81,8 +93,7 @@ audio_path = None
 # Modify the app layout to show initial data if directory was provided
 app.layout = html.Div(
     [
-        html.H1("Sound Cluster"),
-        html.Button("Exit Application", id="exit-button", style={"margin": "10px"}),
+        html.H1("Sound Cluster", style={"margin": "10px"}),
         html.Div(id="directory-status", style={"marginTop": "10px"}),
         html.Div(
             id="main-content",
@@ -93,10 +104,14 @@ app.layout = html.Div(
             ),
         ),
         dcc.Store(id="audio-data-store"),
-        html.Div(
-            id="directory-path-hidden",
-            style={"display": "none"},
-            children=initial_directory or "",
+        dbc.Row(
+            [
+                dbc.Col(
+                    dbc.Button(
+                        "Exit Application", id="exit-button", style={"margin": "10px"}
+                    )
+                )
+            ]
         ),
     ]
 )
@@ -107,14 +122,13 @@ app.layout = html.Div(
     Output("audio-info", "children"),
     Output("main-plot", "clickData"),
     [Input("main-plot", "clickData")],
-    [State("directory-path-hidden", "children")],
     prevent_initial_call=True,
 )
-def update_audio(clickData, directory):
-    if clickData:
+def update_audio(clickData):
+    if clickData and audio_analyzer:
         ind = clickData["points"][0]["pointIndex"]
         audio_file = audio_analyzer.audio_files[ind]
-        file_path = os.path.join(directory, audio_file)
+        file_path = os.path.join(audio_analyzer.directory, audio_file)
 
         try:
             # Initialize pygame mixer if not already initialized
@@ -140,10 +154,9 @@ def update_audio(clickData, directory):
 @app.callback(
     Output("show-audio-button", "n_clicks"),
     Input("show-audio-button", "n_clicks"),
-    [State("directory-path-hidden", "children")],
     prevent_initial_call=True,
 )
-def show_audio_file(n_clicks, directory):
+def show_audio_file(n_clicks):
     if n_clicks is None:
         return 0
     if not audio_analyzer:
@@ -152,7 +165,7 @@ def show_audio_file(n_clicks, directory):
         return 0
 
     audio_file = audio_analyzer.chosen_audio_file_path
-    file_path = os.path.join(directory, audio_file)
+    file_path = os.path.join(audio_analyzer.directory, audio_file)
 
     # Different commands for different operating systems
     if platform.system() == "Windows":
