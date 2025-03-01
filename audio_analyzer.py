@@ -14,8 +14,6 @@ class AudioAnalyzer:
         self.audio_files = self.list_audio_files()
         self.sounds_df = pd.DataFrame(columns=range(8))
         self.chosen_audio_file_path = ""
-        self.current_waveform = None
-        self.current_sr = None
         self.process_audio_files()
         self.create_plot()
 
@@ -135,6 +133,7 @@ class AudioAnalyzer:
         )
 
     def update_waveform(self, file_path):
+        self.chosen_audio_file_path = file_path
         y, sr = librosa.load(file_path)
 
         self.fig.update_traces(

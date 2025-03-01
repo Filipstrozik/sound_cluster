@@ -6,6 +6,8 @@ import pygame
 import os
 import sys
 from audio_analyzer import AudioAnalyzer
+import platform
+import subprocess
 
 # Initialize Dash app with suppressed callback exceptions
 app = dash.Dash(__name__, suppress_callback_exceptions=True)
@@ -46,10 +48,10 @@ def load_directory(contents, filename):
                         dbc.Col(
                             html.Div(
                                 [
-                                    # html.Button(
-                                    #     "Play Audio", id="play-button", n_clicks=0
-                                    # ),
                                     html.Div(id="audio-info"),
+                                    html.Button(
+                                        "Show audio", id="show-audio-button", n_clicks=0
+                                    ),
                                 ]
                             )
                         ),
@@ -69,6 +71,8 @@ if initial_directory:
     audio_analyzer = AudioAnalyzer(initial_directory)
 else:
     audio_analyzer = None
+
+audio_path = None
 
 # Modify the app layout to show initial data if directory was provided
 app.layout = html.Div(
@@ -126,6 +130,37 @@ def update_audio(clickData, directory):
             return audio_analyzer.fig, f"Error playing audio: {str(e)}", None
 
     return audio_analyzer.fig, None, None
+
+
+@app.callback(
+    Output("show-audio-button", "n_clicks"),
+    Input("show-audio-button", "n_clicks"),
+    [State("directory-path-hidden", "children")],
+    prevent_initial_call=True,
+)
+def show_audio_file(n_clicks, directory):
+    if n_clicks is None:
+        return 0
+    if not audio_analyzer:
+        return 0
+    if not audio_analyzer.chosen_audio_file_path:
+        return 0
+
+    audio_file = audio_analyzer.chosen_audio_file_path
+    file_path = os.path.join(directory, audio_file)
+
+    # Different commands for different operating systems
+    if platform.system() == "Windows":
+        subprocess.run(["explorer", "/select,", os.path.normpath(file_path)])
+    elif platform.system() == "Darwin":  # macOS
+        subprocess.run(["open", "-R", file_path])
+    else:  # Linux
+        try:
+            subprocess.run(["xdg-open", os.path.dirname(file_path)])
+        except FileNotFoundError:
+            subprocess.run(["nautilus", os.path.dirname(file_path)])
+
+    return 0
 
 
 if __name__ == "__main__":
