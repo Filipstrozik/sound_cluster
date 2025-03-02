@@ -15,6 +15,7 @@ app = dash.Dash(
     suppress_callback_exceptions=True,
     external_stylesheets=[dbc.themes.BOOTSTRAP],
 )
+app.title = "Sound Cluster by @filipstrozik"
 
 # Get directory path from command line arguments
 initial_directory = sys.argv[1] if len(sys.argv) > 1 else None
@@ -47,15 +48,46 @@ def load_directory(contents, filename):
                             html.Div(
                                 [
                                     dcc.Graph(
-                                        id="main-plot",
-                                        figure=audio_analyzer.fig,
+                                        id="scatter-plot",
+                                        figure=audio_analyzer.scatter_fig,
                                         config={
                                             "editable": True,
                                             "displayModeBar": False,
                                         },
+                                        style={"height": "70vh"},
                                     ),
                                 ]
-                            )
+                            ),
+                            width=7,  # 7/12 ≈ 60%
+                        ),
+                        dbc.Col(
+                            html.Div(
+                                [
+                                    dbc.Row(
+                                        dcc.Graph(
+                                            id="waveform-plot",
+                                            figure=audio_analyzer.waveform_fig,
+                                            config={
+                                                "editable": True,
+                                                "displayModeBar": False,
+                                            },
+                                            style={"height": "35vh"},
+                                        )
+                                    ),
+                                    dbc.Row(
+                                        dcc.Graph(
+                                            id="spectrogram-plot",
+                                            figure=audio_analyzer.spectrogram_fig,
+                                            config={
+                                                "editable": True,
+                                                "displayModeBar": False,
+                                            },
+                                            style={"height": "35vh"},
+                                        )
+                                    ),
+                                ]
+                            ),
+                            width=5,  # 5/12 ≈ 40%
                         ),
                     ]
                 ),
@@ -118,10 +150,11 @@ app.layout = html.Div(
 
 
 @app.callback(
-    Output("main-plot", "figure"),
+    Output("waveform-plot", "figure"),
+    Output("spectrogram-plot", "figure"),
     Output("audio-info", "children"),
-    Output("main-plot", "clickData"),
-    [Input("main-plot", "clickData")],
+    Output("scatter-plot", "clickData"),
+    [Input("scatter-plot", "clickData")],
     prevent_initial_call=True,
 )
 def update_audio(clickData):
@@ -144,11 +177,23 @@ def update_audio(clickData):
             pygame.mixer.music.play()
 
             audio_analyzer.update_waveform(file_path)
-            return audio_analyzer.fig, f"Now playing: {audio_file}", None
-        except Exception as e:
-            return audio_analyzer.fig, f"Error playing audio: {str(e)}", None
+            audio_analyzer.update_spectrogram(file_path)
 
-    return audio_analyzer.fig, None, None
+            return (
+                audio_analyzer.waveform_fig,
+                audio_analyzer.spectrogram_fig,
+                f"Now playing: {audio_file}",
+                None,
+            )
+        except Exception as e:
+            return (
+                audio_analyzer.waveform_fig,
+                audio_analyzer.spectrogram_fig,
+                f"Error playing audio: {str(e)}",
+                None,
+            )
+
+    return audio_analyzer.waveform_fig, audio_analyzer.spectrogram_fig, None, None
 
 
 @app.callback(

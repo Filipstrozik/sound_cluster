@@ -15,7 +15,16 @@ class AudioAnalyzer:
         self.sounds_df = pd.DataFrame(columns=range(8))
         self.chosen_audio_file_path = ""
         self.process_audio_files()
-        self.create_plot()
+
+        # Create separate figures instead of subplots
+        self.scatter_fig = go.Figure()
+        self.waveform_fig = go.Figure()
+        self.spectrogram_fig = go.Figure()
+
+        # Initialize both figures
+        self._initialize_scatter_plot()
+        self._initialize_waveform_plot()
+        self._initialize_spectrogram_plot()
 
     def list_audio_files(self):
         return [
@@ -94,49 +103,96 @@ class AudioAnalyzer:
             sounds_df_pca, index=self.sounds_df.index, columns=["PC1", "PC2"]
         )
 
-    def create_plot(self):
-        self.fig = make_subplots(rows=1, cols=2, column_widths=[0.6, 0.4])
-
-        scatter = go.Scatter(
-            x=self.sounds_df_pca["PC1"],
-            y=self.sounds_df_pca["PC2"],
-            mode="markers",
-            text=self.audio_files,
-            textposition="top center",
-            marker=dict(size=10, color="blue", opacity=0.8),
-            hoverinfo="text",
-        )
-
-        self.fig.add_trace(scatter, row=1, col=1)
-
-        self.fig.update_layout(hovermode="closest")
-
-        # Add empty waveform plot initially
-        self.fig.add_trace(
+    def _initialize_scatter_plot(self):
+        self.scatter_fig.add_trace(
             go.Scatter(
-                y=[],
-                line=dict(color="black", width=1),
-                showlegend=False,
-                hoverinfo="none",
-            ),
-            row=1,
-            col=2,
+                x=self.sounds_df_pca["PC1"],
+                y=self.sounds_df_pca["PC2"],
+                mode="markers",
+                text=self.audio_files,
+                hoverinfo="text",
+                marker=dict(
+                    size=16,
+                    color=self.sounds_df_pca["PC1"],
+                    colorscale="Viridis",
+                    showscale=False,
+                ),
+            )
         )
-
-        self.fig.update_layout(
-            xaxis_title="PC1",
-            yaxis_title="PC2",
-            xaxis2_title="Time (s)",
-            yaxis2_title="Amplitude",
+        self.scatter_fig.update_layout(
+            title="Audio Files Clustering",
+            title_text="",
+            xaxis_title="X",
+            yaxis_title="Y",
             showlegend=False,
         )
 
-    def update_waveform(self, file_path):
-        self.chosen_audio_file_path = file_path
-        y, sr = librosa.load(file_path)
+    def _initialize_waveform_plot(self):
+        self.waveform_fig.update_layout(
+            title_text="",
+            xaxis_title="Time",
+            yaxis_title="Amplitude",
+            showlegend=False,
+        )
 
-        self.fig.update_traces(
-            y=y,
-            row=1,
-            col=2,
+    def _initialize_spectrogram_plot(self):
+        self.spectrogram_fig.update_layout(
+            title_text="",
+            xaxis_title="Frequency",
+            yaxis_title="Magnitude",
+        )
+
+    def update_waveform(self, file_path):
+        self.chosen_audio_file_path = os.path.basename(file_path)
+        y, sr = librosa.load(file_path)
+        times = np.arange(len(y)) / sr
+
+        self.waveform_fig.data = []  # Clear existing traces
+        self.waveform_fig.add_trace(
+            go.Scatter(
+                x=times,
+                y=y,
+                mode="lines",
+                name="waveform",
+                line=dict(color="black", width=2),
+            )
+        )
+        self.waveform_fig.update_layout(
+            title=f"Waveform - {os.path.basename(file_path)}",
+            title_text="",
+            xaxis_title="Time (s)",
+            yaxis_title="Amplitude",
+        )
+
+    def update_spectrogram(self, file_path):
+        y, sr = librosa.load(file_path)
+        # compute a Fast Fourier Transform
+        fft_values = np.fft.fft(y)
+        fft_magnitudes = np.abs(fft_values)
+        freqs = np.fft.fftfreq(len(y), d=1 / sr)
+
+        # Filter frequencies to only include 0Hz to 20kHz
+        mask = (freqs >= 0) & (freqs <= 20000)
+        freqs = freqs[mask]
+        fft_magnitudes = fft_magnitudes[mask]
+
+        # Normalize frequencies for colorscale
+        norm_freqs = (freqs - freqs.min()) / (freqs.max() - freqs.min())
+
+        self.spectrogram_fig.data = []  # Clear existing traces
+        self.spectrogram_fig.add_trace(
+            go.Scatter(
+                x=freqs,
+                y=fft_magnitudes,
+                mode="lines",
+                name="FFT",
+                line=dict(color="black", width=2),
+                marker=dict(color=norm_freqs, colorscale="Viridis", showscale=True),
+            )
+        )
+        self.spectrogram_fig.update_layout(
+            title=f"Spectrogram - {os.path.basename(file_path)}",
+            title_text="",
+            xaxis_title="Frequency",
+            yaxis_title="Magnitude",
         )
