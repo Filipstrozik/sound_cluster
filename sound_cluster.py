@@ -51,8 +51,10 @@ def load_directory(contents, filename):
                                         id="scatter-plot",
                                         figure=audio_analyzer.scatter_fig,
                                         config={
-                                            "editable": True,
+                                            "editable": False,
                                             "displayModeBar": False,
+                                            "displaylogo": False,
+                                            "displayMode": "static",
                                         },
                                         style={"height": "70vh"},
                                     ),
@@ -70,6 +72,9 @@ def load_directory(contents, filename):
                                             config={
                                                 "editable": True,
                                                 "displayModeBar": False,
+                                                "displaylogo": False,
+                                                "displayMode": "static",
+                                                "staticPlot": True,
                                             },
                                             style={"height": "35vh"},
                                         )
@@ -81,6 +86,9 @@ def load_directory(contents, filename):
                                             config={
                                                 "editable": True,
                                                 "displayModeBar": False,
+                                                "displaylogo": False,
+                                                "displayMode": "static",
+                                                "staticPlot": True,
                                             },
                                             style={"height": "35vh"},
                                         )
@@ -193,7 +201,10 @@ def update_audio(clickData):
                 None,
             )
 
-    return audio_analyzer.waveform_fig, audio_analyzer.spectrogram_fig, None, None
+    if audio_analyzer:
+        return audio_analyzer.waveform_fig, audio_analyzer.spectrogram_fig, None, None
+    else:
+        return None, None, None, None
 
 
 @app.callback(
@@ -238,6 +249,14 @@ def exit_application(n_clicks):
         if pygame.mixer.get_init():
             pygame.mixer.music.stop()
             pygame.mixer.quit()
+
+        # Kill any processes using port 8050
+        if platform.system() == "Windows":
+            subprocess.run(["netstat", "-ano", "|", "findstr", ":8050"], shell=True)
+            subprocess.run(["taskkill", "/F", "/PID", str(os.getpid())], shell=True)
+        else:
+            subprocess.run(["lsof", "-i", ":8050"])
+            subprocess.run(["kill", "-9", str(os.getpid())])
 
         # exit the application
         os._exit(0)

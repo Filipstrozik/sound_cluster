@@ -17,8 +17,11 @@ def select_directory():
     )
 
     if directory:
+        print(f"Selected directory: {directory}")
         sound_cluster_path = os.path.join(os.path.dirname(__file__), "sound_cluster.py")
         subprocess.Popen([sys.executable, sound_cluster_path, directory])
+    else:
+        print("No directory selected")
 
     root.destroy()
 

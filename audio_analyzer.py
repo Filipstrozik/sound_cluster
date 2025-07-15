@@ -10,6 +10,7 @@ from sklearn.decomposition import PCA
 
 class AudioAnalyzer:
     def __init__(self, directory):
+        print(f"Initializing AudioAnalyzer with directory: {directory}")
         self.directory = directory
         self.audio_files = self.list_audio_files()
         self.sounds_df = pd.DataFrame(columns=range(8))
@@ -121,7 +122,6 @@ class AudioAnalyzer:
         )
         self.scatter_fig.update_layout(
             title="Audio Files Clustering",
-            title_text="",
             xaxis_title="X",
             yaxis_title="Y",
             showlegend=False,
@@ -129,7 +129,7 @@ class AudioAnalyzer:
 
     def _initialize_waveform_plot(self):
         self.waveform_fig.update_layout(
-            title_text="",
+            title="Waveform",
             xaxis_title="Time",
             yaxis_title="Amplitude",
             showlegend=False,
@@ -137,7 +137,7 @@ class AudioAnalyzer:
 
     def _initialize_spectrogram_plot(self):
         self.spectrogram_fig.update_layout(
-            title_text="",
+            title="Spectrogram",
             xaxis_title="Frequency",
             yaxis_title="Magnitude",
         )
@@ -159,25 +159,21 @@ class AudioAnalyzer:
         )
         self.waveform_fig.update_layout(
             title=f"Waveform - {os.path.basename(file_path)}",
-            title_text="",
             xaxis_title="Time (s)",
             yaxis_title="Amplitude",
         )
 
     def update_spectrogram(self, file_path):
         y, sr = librosa.load(file_path)
+        print(f"sr: {sr}")
         # compute a Fast Fourier Transform
         fft_values = np.fft.fft(y)
         fft_magnitudes = np.abs(fft_values)
         freqs = np.fft.fftfreq(len(y), d=1 / sr)
 
-        # Filter frequencies to only include 0Hz to 20kHz
         mask = (freqs >= 0) & (freqs <= 20000)
         freqs = freqs[mask]
         fft_magnitudes = fft_magnitudes[mask]
-
-        # Normalize frequencies for colorscale
-        norm_freqs = (freqs - freqs.min()) / (freqs.max() - freqs.min())
 
         self.spectrogram_fig.data = []  # Clear existing traces
         self.spectrogram_fig.add_trace(
@@ -186,13 +182,28 @@ class AudioAnalyzer:
                 y=fft_magnitudes,
                 mode="lines",
                 name="FFT",
-                line=dict(color="black", width=2),
-                marker=dict(color=norm_freqs, colorscale="Viridis", showscale=True),
+                line=dict(width=2, color="black"),
             )
         )
         self.spectrogram_fig.update_layout(
             title=f"Spectrogram - {os.path.basename(file_path)}",
-            title_text="",
-            xaxis_title="Frequency",
+            xaxis_title="Frequency (Hz)",
             yaxis_title="Magnitude",
+            xaxis_type="log",
+            xaxis=dict(
+                range=[np.log10(20), np.log10(20000)],
+                tickvals=[20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000],
+                ticktext=[
+                    "20",
+                    "50",
+                    "100",
+                    "200",
+                    "500",
+                    "1k",
+                    "2k",
+                    "5k",
+                    "10k",
+                    "20k",
+                ],
+            ),
         )
